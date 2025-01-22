@@ -267,7 +267,7 @@ public static class Solver
         result[endIndex] = CellType.PathEnd;
         return result;
     }
-    
+
     public static Graph<PlanarPoint, CellType, Empty> Astar(Graph<PlanarPoint, CellType, Empty> graph, PlanarPoint startIndex, PlanarPoint endIndex)
     {
         var visited = graph.Nodes.ToDictionary(x => x.Key, x => false);
@@ -275,39 +275,45 @@ public static class Solver
 
         var result = new Graph<PlanarPoint, CellType, Empty>();
 
-        var nextCells = new PriorityQueue<PlanarPoint, int>();
-        nextCells.Enqueue(startIndex, CountDistance(startIndex, distances, endIndex));
+        var nextIndexes = new PriorityQueue<PlanarPoint, int>();
+        nextIndexes.Enqueue(startIndex, CountDistance(startIndex, distances, endIndex));
         visited[startIndex] = true;
+        distances[startIndex] = 0;
+        result.AddNode(startIndex, CellType.Visited);
 
-        while (nextCells.Count > 0)
+        while (nextIndexes.Count > 0)
         {
-            var currentCell = nextCells.Dequeue();
+            var currentIndex = nextIndexes.Dequeue();
 
-            if (graph[currentCell] == CellType.PathEnd)
+            if (currentIndex == endIndex)
                 break;
 
-            foreach (var adjacentCell in graph.AdjacentNodes[currentCell])
+            foreach (var adjacentCell in graph.AdjacentNodes[currentIndex])
             {
-                distances[adjacentCell.Index] = distances[currentCell] + 1;
+                if (visited[adjacentCell.Index])
+                    continue;
+
+                distances[adjacentCell.Index] = distances[currentIndex] + 1;
                 visited[adjacentCell.Index] = true;
-                nextCells.Enqueue(adjacentCell.Index, CountDistance(adjacentCell.Index, distances, endIndex));
+                nextIndexes.Enqueue(adjacentCell.Index, CountDistance(adjacentCell.Index, distances, endIndex));
+                result.AddNode(adjacentCell.Index, CellType.Visited);
             }
         }
 
-        // var nodeIndex = _endIndex;
-        // while (nodeIndex != _startIndex)
-        // {
-        //     var minDistances = Graph.AdjacentNodes[nodeIndex]
-        //         .GroupBy(val => distances[val.Index])
-        //         .OrderBy(x => x.Key)
-        //         .First();
-        //     var randomNode = minDistances.ElementAt(Random.Shared.Next(0, minDistances.Count()));
-        //     result[randomNode.Index] = CellType.PathPoint;
-        //     nodeIndex = randomNode.Index;
-        // }
+        var nodeIndex = endIndex;
+        while (nodeIndex != startIndex)
+        {
+            var minDistances = graph.AdjacentNodes[nodeIndex]
+                .GroupBy(val => distances[val.Index])
+                .OrderBy(x => x.Key)
+                .First();
+            var randomNode = minDistances.ElementAt(Random.Shared.Next(0, minDistances.Count()));
+            result[randomNode.Index] = CellType.PathPoint;
+            nodeIndex = randomNode.Index;
+        }
 
-        // result[_startIndex] = CellType.PathStart;
-        // result[_endIndex] = CellType.PathEnd;
+        result[startIndex] = CellType.PathStart;
+        result[endIndex] = CellType.PathEnd;
 
         return result;
     }

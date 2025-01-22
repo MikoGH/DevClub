@@ -13,10 +13,11 @@ public class Program
         var graph = GraphGenerator.CreateGraphFromMap(map);
         var startIndex = GraphGenerator.GetRandomNode(graph, x => x.Value == CellType.Floor).Index;
         var endIndex = GraphGenerator.GetRandomNode(graph, x => x.Value == CellType.Floor).Index;
-        var bfsMap = Solver.Bfs(graph, startIndex, endIndex);
-
-        var mapToDraw = MapGenerator.CreateMapFromGraph(height, width, graph, bfsMap);
-        Renderer.RenderCellTypeMap(mapToDraw);
+        
+        var astarMap = Solver.Astar(graph, startIndex, endIndex);
+        
+        var astarMapToDraw = MapGenerator.CreateMapFromGraph(height, width, graph, astarMap);
+        Renderer.RenderCellTypeMap(astarMapToDraw);
 
         // dotnet run --configuration Release
         // BenchmarkRunner.Run<Bench>();
