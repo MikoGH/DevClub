@@ -1,4 +1,3 @@
-
 public record struct Node<TIndex, TValue>(TIndex Index, TValue Value)
 : IEquatable<Node<TIndex, TValue>> where TIndex : struct, IEquatable<TIndex>
 {
@@ -88,7 +87,6 @@ where TIndex : struct, IEquatable<TIndex>
             .Select(x => (Key: new EdgeIndex<TIndex>(x.N1.Index, x.N2.Index), Value: x))
             .DistinctBy(x => x.Key)
             .ToDictionary(x => x.Key, x => x.Value);
-        // _adjacentNodes = new(_nodes.Count);
 
         var edgesTuple = _edges.Values.Select(edge => (v1: edge.N1, v2: edge.N2));
         _adjacentNodes = _edges.Values
@@ -100,15 +98,6 @@ where TIndex : struct, IEquatable<TIndex>
                 x => x.Key.Index,
                 x => x.ToHashSet()
             );
-
-        // foreach (var node in _nodes.Values)
-        // {
-        //     var adjacentNodes = _edges.Values
-        //         .Where(edge => edge.Contains(node))
-        //         .Select(edge => edge.N1.Equals(node) ? edge.N2 : edge.N1)
-        //         .ToHashSet();
-        //     _adjacentNodes[node.Index] = adjacentNodes;
-        // }
     }
 
     // TODO: Возвращать коллекцию связанных вершин по индексу вершины.

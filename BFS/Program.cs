@@ -1,60 +1,25 @@
-﻿using System;
-using System.Reflection.Metadata.Ecma335;
-using BenchmarkDotNet.Attributes;
+﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
-using static Program;
 using MapNode = Node<PlanarPoint, CellType>;
 using MapEdge = Edge<Node<PlanarPoint, CellType>, Empty>;
-
-public record struct PlanarPoint(int Y, int X);
 
 public class Program
 {
     public static void Main(string[] args)
     {
-        // var width = 160;
-        // var height = 80;
-        // var map = Bench.CreateCellularMap(height, width);
-        // var graph = Bench.CreateGraphFromMap(map);
-        // var startIndex = Bench.GetRandomNode(graph, x => x.Value == CellType.Floor).Index;
-        // var endIndex = Bench.GetRandomNode(graph, x => x.Value == CellType.Floor).Index;
-        // var dfsStackMap = Bench.DfsStack();
+        var width = 60;
+        var height = 40;
+        var map = MapGenerator.CreateCellularMap(height, width);
+        var graph = GraphGenerator.CreateGraphFromMap(map);
+        var startIndex = GraphGenerator.GetRandomNode(graph, x => x.Value == CellType.Floor).Index;
+        var endIndex = GraphGenerator.GetRandomNode(graph, x => x.Value == CellType.Floor).Index;
+        var bfsMap = Solver.Bfs(graph, startIndex, endIndex);
 
-        // var bench = new Bench();
-        // bench.Setup();
-        // var dfsStackMap = bench.DfsStack();
-        // var mapToDraw = CreateMapFromGraph(bench.Height, bench.Width, bench.Graph, dfsStackMap);
-        // Renderer.RenderCellTypeMap(mapToDraw);
+        var mapToDraw = MapGenerator.CreateMapFromGraph(height, width, graph, bfsMap);
+        Renderer.RenderCellTypeMap(mapToDraw);
 
         // dotnet run --configuration Release
-        BenchmarkRunner.Run<Bench>();
-    }
-
-    private static Map<CellType> CreateMapFromGraph(int height, int width, params Graph<PlanarPoint, CellType, Empty>[] graphs)
-    {
-        var result = new Map<CellType>(height, width);
-        for (int row = 0; row < height; row++)
-        {
-            for (int column = 0; column < width; column++)
-            {
-                result[row, column] = CellType.Wall;
-            }
-        }
-
-        for (var graphIndex = 0; graphIndex < graphs.Length; graphIndex++)
-        {
-            var graph = graphs[graphIndex];
-            var mapNodes = graph.Nodes
-                .Where(val => val.Key.Y < height && val.Key.X < width
-                    && val.Key.Y >= 0 && val.Key.X >= 0)
-                .ToDictionary(x => x.Key, x => x.Value.Value);
-
-            foreach (var node in mapNodes)
-            {
-                result[node.Key.Y, node.Key.X] = node.Value;
-            }
-        }
-        return result;
+        // BenchmarkRunner.Run<Bench>();
     }
 }
 
@@ -78,161 +43,8 @@ public class Program
 // | DfsStack | 26,944.792 ms | 6,053.919 ms | 17,850.119 ms | 23,644.562 ms |    3 |   6.73 MB |
 // | DfsBfs   |     10.637 ms |     1.313 ms |      3.850 ms |     12.213 ms |    2 |   7.53 MB |
 
-public enum CellType : byte
-{
-    Floor = 0,
-    PathStart = 64,
-    PathEnd = 65,
-    PathPoint = 66,
-    Visited = 128,
-    Wall = 255,
-}
 
-public static class Renderer
-{
-    public static void RenderBooleanMap(Map<bool> map)
-    {
-        for (int row = 0; row < map.Height; row++)
-        {
-            for (int column = 0; column < map.Width; column++)
-            {
-                Console.Write(map[row, column] ? ' ' : '#');
-            }
-            Console.WriteLine();
-        }
-    }
 
-    public static void RenderCellTypeMap(Map<CellType> map)
-    {
-        for (int row = 0; row < map.Height; row++)
-        {
-            for (int column = 0; column < map.Width; column++)
-            {
-                if (map[row, column] is CellType.Floor)
-                {
-                    Console.Write(' ');
-                }
-                else if (map[row, column] is CellType.Wall)
-                {
-                    Console.Write('#');
-                }
-                else if (map[row, column] is CellType.Visited)
-                {
-                    Console.Write('·');
-                }
-                else if (map[row, column] is CellType.PathStart)
-                {
-                    Console.Write('♦');
-                }
-                else if (map[row, column] is CellType.PathEnd)
-                {
-                    Console.Write('♣');
-                }
-                else if (map[row, column] is CellType.PathPoint)
-                {
-                    Console.Write('◌');
-                }
-                else
-                {
-                    Console.Write('?');
-                }
-            }
-            Console.WriteLine();
-        }
-        Console.WriteLine();
-    }
-}
-
-public class Map<T>
-{
-    private readonly int _width;
-    private readonly int _height;
-    private readonly T[] _array;
-
-    public int Width => _width;
-    public int Height => _height;
-
-    public int Length => _array.Length;
-
-    public T this[int row, int column]
-    {
-        get => _array[row * _width + column];
-        set => _array[row * _width + column] = value;
-    }
-
-    public T this[int index]
-    {
-        get => _array[index];
-        set => _array[index] = value;
-    }
-
-    public Map(int height, int width)
-    {
-        if (height <= 0) throw new ArgumentNullException(nameof(height));
-        if (width <= 0) throw new ArgumentNullException(nameof(width));
-
-        // TODO: Проверить overflow._adjacentNodes
-
-        _height = height;
-        _width = width;
-
-        _array = new T[height * width];
-    }
-
-    public int CountAdjacent(int y, int x, Func<T, bool> predicate, bool countOutOfBounds)
-    {
-        // TODO: Добавить радиус
-        int result = 0;
-        for (int row = y - 1; row <= y + 1; row++)
-        {
-            for (int column = x - 1; column <= x + 1; column++)
-            {
-                if (row == y && column == x)
-                    continue;
-
-                var isOutOfBounds = (row < 0 || column < 0 || row >= _height || column >= _width);
-                if (isOutOfBounds && !countOutOfBounds)
-                    continue;
-
-                var hasValue = (isOutOfBounds && countOutOfBounds)
-                    || predicate(_array[row * Width + column]);
-                if (!hasValue)
-                    continue;
-
-                result++;
-            }
-        }
-
-        return result;
-    }
-
-    public IEnumerable<PlanarPoint> GetAdjacent(int y, int x, Func<T, bool> predicate, bool includeOutOfBounds, bool includeDiagonals)
-    {
-        // TODO: Добавить радиус
-        for (int row = y - 1; row <= y + 1; row++)
-        {
-            for (int column = x - 1; column <= x + 1; column++)
-            {
-                if (!includeDiagonals && row != y && column != x)
-                    continue;
-
-                if (row == y && column == x)
-                    continue;
-
-                var isOutOfBounds = (row < 0 || column < 0 || row >= _height || column >= _width);
-                if (isOutOfBounds && !includeOutOfBounds)
-                    continue;
-
-                var hasValue = (isOutOfBounds && includeOutOfBounds)
-                    || predicate(_array[row * Width + column]);
-                if (!hasValue)
-                    continue;
-
-                yield return new PlanarPoint(row, column);
-            }
-        }
-    }
-}
 
 // TODO: 0. [+] Переопределить сигнатуру индексера ребра на композит индексатора вершин, агностичный положению
 //       1. [+] Переопределить сигнатуры конструкторов и добавления графа
