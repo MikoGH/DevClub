@@ -7,8 +7,8 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        var width = 60;
-        var height = 40;
+        var width = 120;
+        var height = 80;
         var map = MapGenerator.CreateCellularMap(height, width);
         var graph = GraphGenerator.CreateGraphFromMap(map);
         var startIndex = GraphGenerator.GetRandomNode(graph, x => x.Value == CellType.Floor).Index;

@@ -1,3 +1,6 @@
+using ManagedCuda;
+using ManagedCuda.BasicTypes;
+
 public static class Solver
 {
     public static void BaselineBfs()
@@ -70,6 +73,38 @@ public static class Solver
             Console.WriteLine(item);
 
         }
+    }
+
+    public static Graph<PlanarPoint, CellType, Empty> GpuBfs(Graph<PlanarPoint, CellType, Empty> graph, PlanarPoint startIndex, PlanarPoint endIndex)
+    {
+        var contex = new CudaContext();
+        //var kernal = contex.LoadKernelPTX("kernal.ptx", "bfs_kernel");
+        var kernal = contex.LoadKernelPTX("kernal.ptx", "increment_kernel");
+
+        int size = 10;
+        var arr = new CudaDeviceVariable<int>(size);
+
+        int[] host = new int[size];
+        for (int i = 0; i < size; i++)
+            host[i] = i;
+
+        arr.CopyToDevice(host);
+
+        kernal.BlockDimensions = new ManagedCuda.VectorTypes.dim3(size, 1, 1);
+        kernal.GridDimensions = new ManagedCuda.VectorTypes.dim3(1, 1, 1); 
+
+        kernal.Run(arr.DevicePointer, host.Length);
+
+        int[] result = new int[size];
+        arr.CopyToHost(result);
+
+        foreach(var item in result)
+            Console.WriteLine(item);
+
+        arr.Dispose();
+        contex.Dispose();
+
+        return Graph<PlanarPoint, CellType, Empty>.Empty;
     }
 
     public static Graph<PlanarPoint, CellType, Empty> Bfs(Graph<PlanarPoint, CellType, Empty> graph, PlanarPoint startIndex, PlanarPoint endIndex)
