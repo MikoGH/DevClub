@@ -1,9 +1,0 @@
-extern "C" __global__ increment_kernel(int *arr, int n)
-{
-    int idx = threadIdx.x + blockIdx.x * blockDim.x;
-
-    if (idx < n)
-    {
-        arr[idx] += 100;
-    }
-}

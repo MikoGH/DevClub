@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
-    <PackageReference Include="ManagedCuda" Version="10.0.0" />
+    <PackageReference Include="OpenCL.Net" Version="2.2.9" />
   </ItemGroup>
 
 </Project>

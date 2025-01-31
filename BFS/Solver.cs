@@ -1,8 +1,13 @@
-using ManagedCuda;
-using ManagedCuda.BasicTypes;
+using OpenCL.Net;
 
 public static class Solver
 {
+    private const string KernelSource = @"
+    __kernel void square(__global float* input, __global float* output) {
+        int i = get_global_id(0);
+        output[i] = input[i] * input[i];
+    }";
+
     public static void BaselineBfs()
     {
         int n = 7;  // кол-во вершин
@@ -75,36 +80,47 @@ public static class Solver
         }
     }
 
-    public static Graph<PlanarPoint, CellType, Empty> GpuBfs(Graph<PlanarPoint, CellType, Empty> graph, PlanarPoint startIndex, PlanarPoint endIndex)
+    public static float[] GpuBfs(float[] inputArray)
     {
-        var contex = new CudaContext();
-        //var kernal = contex.LoadKernelPTX("kernal.ptx", "bfs_kernel");
-        var kernal = contex.LoadKernelPTX("kernal.ptx", "increment_kernel");
+        int length = inputArray.Length;
+        float[] outputArray = new float[length];
 
-        int size = 10;
-        var arr = new CudaDeviceVariable<int>(size);
+        // Получаем платформу OpenCL
+        ErrorCode error;
+        Platform platform = Cl.GetPlatformIDs(out error).First();
+        Device device = Cl.GetDeviceIDs(platform, DeviceType.Gpu, out error).First();
+        Context context = Cl.CreateContext(null, 1, new[] { device }, null, IntPtr.Zero, out error);
+        CommandQueue commandQueue = Cl.CreateCommandQueue(context, device, CommandQueueProperties.None, out error);
 
-        int[] host = new int[size];
-        for (int i = 0; i < size; i++)
-            host[i] = i;
+        // Создаем буферы
+        IMem<float> inputBuffer = Cl.CreateBuffer<float>(context, MemFlags.ReadOnly | MemFlags.CopyHostPtr, inputArray, out error);
+        IMem<float> outputBuffer = Cl.CreateBuffer<float>(context, MemFlags.WriteOnly, length, out error);
 
-        arr.CopyToDevice(host);
+        // Создаем и компилируем программу
+        var program = Cl.CreateProgramWithSource(context, 1, new[] { KernelSource }, null, out error);
+        Cl.BuildProgram(program, 1, new[] { device }, string.Empty, null, IntPtr.Zero);
+        Kernel kernel = Cl.CreateKernel(program, "square", out error);
 
-        kernal.BlockDimensions = new ManagedCuda.VectorTypes.dim3(size, 1, 1);
-        kernal.GridDimensions = new ManagedCuda.VectorTypes.dim3(1, 1, 1); 
+        // Привязываем аргументы
+        Cl.SetKernelArg(kernel, 0, inputBuffer);
+        Cl.SetKernelArg(kernel, 1, outputBuffer);
 
-        kernal.Run(arr.DevicePointer, host.Length);
+        // Запускаем выполнение
+        Event kernelEvent;
+        Cl.EnqueueNDRangeKernel(commandQueue, kernel, 1, null, new[] { (IntPtr)length }, null, 0, null, out kernelEvent);
 
-        int[] result = new int[size];
-        arr.CopyToHost(result);
+        // Читаем результаты
+        Cl.EnqueueReadBuffer(commandQueue, outputBuffer, Bool.True, IntPtr.Zero, length * sizeof(float), outputArray, 0, null, out kernelEvent);
 
-        foreach(var item in result)
-            Console.WriteLine(item);
+        // Освобождаем ресурсы
+        Cl.ReleaseKernel(kernel);
+        Cl.ReleaseProgram(program);
+        Cl.ReleaseMemObject(inputBuffer);
+        Cl.ReleaseMemObject(outputBuffer);
+        Cl.ReleaseCommandQueue(commandQueue);
+        Cl.ReleaseContext(context);
 
-        arr.Dispose();
-        contex.Dispose();
-
-        return Graph<PlanarPoint, CellType, Empty>.Empty;
+        return outputArray;
     }
 
     public static Graph<PlanarPoint, CellType, Empty> Bfs(Graph<PlanarPoint, CellType, Empty> graph, PlanarPoint startIndex, PlanarPoint endIndex)
