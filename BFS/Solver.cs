@@ -221,7 +221,7 @@ public static class Solver
             Dfs(graph, result, distances, adjacentNode.Index, endIndex);
         }
     }
-    
+
     public static Graph<PlanarPoint, CellType, Empty> DfsStack(Graph<PlanarPoint, CellType, Empty> graph, PlanarPoint startIndex, PlanarPoint endIndex)
     {
         var distances = graph.Nodes.ToDictionary(x => x.Key, x => int.MaxValue);
@@ -369,8 +369,61 @@ public static class Solver
         return result;
     }
 
+    public static Graph<PlanarPoint, CellType, Empty> AstarDuke(Graph<PlanarPoint, CellType, Empty> graph, PlanarPoint startIndex, PlanarPoint endIndex)
+    {
+        var result = new Graph<PlanarPoint, CellType, Empty>();
+        var distances = new Graph<PlanarPoint, int, Empty>();
+        distances.AddNode(startIndex, 0);
+
+        var nextIndexes = new PriorityQueue<PlanarPoint, int>();
+        nextIndexes.Enqueue(startIndex, CountDistance(startIndex, distances[startIndex], endIndex));
+        result.AddNode(startIndex, CellType.Visited);
+
+        while (nextIndexes.Count > 0)
+        {
+            var currentIndex = nextIndexes.Dequeue();
+
+            if (currentIndex == endIndex)
+                break;
+
+            foreach (var adjacentCell in graph.AdjacentNodes[currentIndex])
+            {
+                var adjacentIndex = adjacentCell.Index;
+                if (distances.ContainsNode(adjacentIndex))
+                    continue;
+
+                distances.AddNode(adjacentIndex, distances[currentIndex] + 1);
+                nextIndexes.Enqueue(adjacentIndex, CountDistance(adjacentIndex, distances[adjacentIndex], endIndex));
+                result.AddNode(adjacentIndex, CellType.Visited);
+            }
+        }
+
+        var nodeIndex = endIndex;
+        while (nodeIndex != startIndex)
+        {
+            var minDistances = graph.AdjacentNodes[nodeIndex]
+                .Where(val => distances.ContainsNode(val.Index))
+                .GroupBy(val => distances[val.Index])
+                .OrderBy(x => x.Key)
+                .First();
+            var randomNode = minDistances.ElementAt(Random.Shared.Next(0, minDistances.Count()));
+            result[randomNode.Index] = CellType.PathPoint;
+            nodeIndex = randomNode.Index;
+        }
+
+        result[startIndex] = CellType.PathStart;
+        result[endIndex] = CellType.PathEnd;
+
+        return result;
+    }
+
     private static int CountDistance(PlanarPoint planarPoint, Dictionary<PlanarPoint, int> distances, PlanarPoint endIndex)
     {
         return distances[planarPoint] + Math.Abs(endIndex.Y - planarPoint.Y) + Math.Abs(endIndex.X - planarPoint.X);
+    }
+
+    private static int CountDistance(PlanarPoint planarPoint, int distance, PlanarPoint endIndex)
+    {
+        return distance + Math.Abs(endIndex.Y - planarPoint.Y) + Math.Abs(endIndex.X - planarPoint.X);
     }
 }

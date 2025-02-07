@@ -115,7 +115,9 @@ where TIndex : struct, IEquatable<TIndex>
         return node;
     }
 
-    private bool ContainsNode(Node<TIndex, TNodeValue> node) => _nodes.ContainsKey(node.Index);
+    public bool ContainsNode(Node<TIndex, TNodeValue> node) => _nodes.ContainsKey(node.Index);
+
+    public bool ContainsNode(TIndex index) => _nodes.ContainsKey(index);
 
     public bool TryAddEdge(
         Node<TIndex, TNodeValue> node1,

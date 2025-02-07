@@ -7,27 +7,33 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        //var width = 120;
-        //var height = 80;
-        //var map = MapGenerator.CreateCellularMap(height, width);
-        //var graph = GraphGenerator.CreateGraphFromMap(map);
-        //var startIndex = GraphGenerator.GetRandomNode(graph, x => x.Value == CellType.Floor).Index;
-        //var endIndex = GraphGenerator.GetRandomNode(graph, x => x.Value == CellType.Floor).Index;
+        var width = 40;
+        var height = 40;
+        var map = MapGenerator.CreateCellularMap(height, width);
+        var graph = GraphGenerator.CreateGraphFromMap(map);
+        var startIndex = GraphGenerator.GetRandomNode(graph, x => x.Value == CellType.Floor).Index;
+        var endIndex = GraphGenerator.GetRandomNode(graph, x => x.Value == CellType.Floor).Index;
 
-        //var astarMap = Solver.Astar(graph, startIndex, endIndex);
+        var astarMap = Solver.Astar(graph, startIndex, endIndex);
+        var astarDukeMap = Solver.AstarDuke(graph, startIndex, endIndex);
 
-        //var astarMapToDraw = MapGenerator.CreateMapFromGraph(height, width, graph, astarMap);
-        //Renderer.RenderCellTypeMap(astarMapToDraw);
+        var astarMapToDraw = MapGenerator.CreateMapFromGraph(height, width, graph, astarMap);
+        Renderer.RenderCellTypeMap(astarMapToDraw);
 
+        Console.ReadLine();
+        Console.WriteLine();
 
-        float[] input = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f };
-        float[] result = Solver.GpuBfs(input);
+        var astarDukeMapToDraw = MapGenerator.CreateMapFromGraph(height, width, graph, astarDukeMap);
+        Renderer.RenderCellTypeMap(astarDukeMapToDraw);
 
-        Console.WriteLine("Исходный массив: " + string.Join(", ", input));
-        Console.WriteLine("Возведенный в квадрат: " + string.Join(", ", result));
+        // float[] input = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f };
+        // float[] result = Solver.GpuBfs(input);
 
-        // dotnet run --configuration Release
-        // BenchmarkRunner.Run<Bench>();
+        // Console.WriteLine("Исходный массив: " + string.Join(", ", input));
+        // Console.WriteLine("Возведенный в квадрат: " + string.Join(", ", result));
+
+        // // dotnet run --configuration Release
+        // BenchmarkRunner.Run<CpuGpuBench>();
     }
 }
 

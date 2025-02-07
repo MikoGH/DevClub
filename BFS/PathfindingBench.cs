@@ -1,7 +1,7 @@
 using BenchmarkDotNet.Attributes;
 
 [MemoryDiagnoser, RankColumn]
-public class Bench
+public class PathfindingBench
 {
     private PlanarPoint _startIndex;
     private PlanarPoint _endIndex;
